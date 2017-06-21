@@ -9,12 +9,13 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Queue;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static com.sankholin.xmcast.Util.ts;
 
 /**
  * Experimental implementation of "Reliable Multicast over IP Multicast" Section 15.4.2, pg.665
@@ -39,8 +40,9 @@ public class Process implements Runnable {
 
     private Queue<String> holdBackQueue = new LinkedList<>();
 
-    public Process(InetAddress group, int port) throws IOException {
-        this.pid = UUID.randomUUID().toString();
+    public Process(String pid, InetAddress group, int port) throws IOException {
+        // this.pid = UUID.randomUUID().toString();
+        this.pid = pid; // just for easy observability, Process should encapsulate this and use UUID in actual implementation
         this.group = group;
         this.port = port;
         this.socket = new MulticastSocket(this.port);
@@ -240,12 +242,6 @@ public class Process implements Runnable {
                 e.printStackTrace();
             }
         }
-    }
-
-    public static String ts() {
-        LocalDateTime ldt = LocalDateTime.ofInstant(Instant.now(), ZoneId.systemDefault());
-        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("hh:mm:ss");
-        return ldt.format(dateTimeFormatter);
     }
 
     public void stop() throws IOException {
