@@ -178,13 +178,24 @@ public class Process implements Runnable {
                     System.out.println(String.format("[%s] [%s]  Already delivered, discard.", this.pid, ts()));
                 }
 
+                // there are one or more messages that it has not yet received
+                // (and which are likely to have been dropped, in the first case)
                 if (S > rgp.get(qid) + 1) {
+                    /**
+                     *  It keeps any message for which S > Rpg + 1 in a hold-back queue (Figure 15.10)
+                     *  – such queues are often used to meet message delivery guarantees.
+                     */
                     holdBackQueue.add(msg);
+
                     // request the diff from pid
                     Long delta = S - rgp.get(qid) + 1;
+
+                    // send it to the original sender, see explanation below
+                    // it is the same situation except S and Rgp
                     _rr(qid, delta);
                 }
 
+                // the second case - if R > Rgq for an enclosed acknowledgement <q, R>
                 JSONArray ack = (JSONArray) jj.get(Lingo.ACK.toString());
                 for (Object obj : ack) {
                     JSONObject jo = (JSONObject) obj;
@@ -192,8 +203,21 @@ public class Process implements Runnable {
                         String id = (String) entry;
                         Long R = (Long) jo.get(id);
                         if (R > rgq.get(id)) {
-                            holdBackQueue.add(msg); // do we need to put in queue? it didn't say clearly
+                            holdBackQueue.add(msg); // do we need to put in queue? guess so, it didn't say clearly
                             Long delta = R - rgq.get(id);
+
+                            /**
+                             * It requests missing messages by sending negative acknowledgements, either to the
+                             * original sender or to a process q from which it has received an acknowledgement
+                             * <q, Rgq> with Rqg no less than the required sequence number.
+                             *
+                             * id = a process q from which it has received an acknowledgement
+                             * qid = original sender
+                             * delta = Rgq no less than the required sequence number
+                             *
+                             * Here I choose to send it to the original sender
+                             */
+
                             _rr(qid, delta);
                         }
                     }
