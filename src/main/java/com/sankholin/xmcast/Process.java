@@ -51,6 +51,14 @@ public class Process implements Runnable {
 
     public void send(String message) {
 
+        /*
+         Possible fix for error in book, see the awkward situation note below.
+         We may want to increment sequence number first, if SGP initialize with zero.
+         The book said:
+          " The sequence number is initially zero." at pg.649
+        */
+        // sgp += 1;
+
         // construct piggy back values on message
         JSONObject jj = new JSONObject();
         jj.put(Lingo.M, message);
@@ -66,7 +74,19 @@ public class Process implements Runnable {
 
         byte[] b = jj.toJSONString().getBytes();
         _mcast(b);
-        sgp += 1; // It is not here, it has to be done after piggyback value has sent
+
+        /*
+         In the book, it said:
+          " The multicaster p then IP-multicasts the message with its piggybacked
+            values to g, and increments sgp by one."
+
+         In that case, sgp has to initialize with one. Otherwise we will have awkward
+         situation such that when checking look ahead sequence number S and, S = 0 + 1 = 1
+         but while we expect next sequence number S is equal 2!
+
+         If you like to test this awkward condition, go ahead and modify sgp = 0L, and run the program.
+        */
+        sgp += 1;
     }
 
     private void _rr(String qid, Long delta) {
